@@ -1,0 +1,13 @@
+plugins {
+    id 'java-library'
+    id 'groovy-gradle-plugin'
+}
+
+gradlePlugin {
+    plugins {
+        jarjar {
+            id = 'org.anarres.gradle.plugin.jarjar'
+            implementationClass = 'org.anarres.gradle.plugin.jarjar.JarjarPlugin'
+        }
+    }
+}

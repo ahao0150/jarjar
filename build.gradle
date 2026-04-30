@@ -1,0 +1,92 @@
+// Jarjar build.gradle - 简化版，兼容新版 Gradle
+
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'eclipse'
+
+    group = "org.anarres.jarjar"
+    version = '1.1.1'
+
+    repositories {
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        mavenCentral()
+    }
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    dependencies {
+        implementation 'com.google.code.findbugs:annotations:3.0.1'
+        implementation 'org.slf4j:slf4j-api:1.7.12'
+    }
+}
+
+project(':jarjar-testdata') {
+    dependencies {
+        implementation 'com.google.guava:guava:17.0'
+    }
+
+    for (int i = 0; i < 4; i++) {
+        String name = "jar$i";
+        Task t = task(name, type: Jar) {
+            archiveClassifier = name
+            from(sourceSets.main.output) {
+                include "**/pkg$i/**"
+            }
+        }
+
+        artifacts {
+            archives t
+        }
+    }
+}
+
+project(':jarjar-core') {
+    dependencies {
+        implementation 'org.ow2.asm:asm-commons:8.0.1'
+        implementation 'org.ow2.asm:asm-util:8.0.1'
+        implementation 'org.ow2.asm:asm:8.0.1'
+
+        testImplementation project(':jarjar-testdata').sourceSets.test.output
+    }
+
+    def samplesProject = project(':jarjar-testdata')
+    test.dependsOn samplesProject.tasks['assemble']
+    test {
+        systemProperty "jar", samplesProject.jar.archiveFile.get().asFile
+        for (int i = 0; i < 4; i++) {
+            systemProperty "jar$i", samplesProject."jar$i".archiveFile.get().asFile
+        }
+    }
+}
+
+project(':jarjar-gradle') {
+    dependencies {
+        implementation project(':jarjar-core')
+        implementation 'org.apache.commons:commons-compress:1.9'
+        implementation gradleApi()
+        implementation 'oro:oro:2.0.8'
+        implementation 'org.ow2.asm:asm:8.0.1'
+
+        testImplementation project(':jarjar-core').sourceSets.test.output
+    }
+}
+
+project(':jarjar-command') {
+    dependencies {
+        implementation project(':jarjar-core')
+        implementation 'net.sf.jopt-simple:jopt-simple:4.8'
+
+        testImplementation project(':jarjar-core').sourceSets.test.output
+    }
+
+    apply plugin: 'application'
+
+    application {
+        mainClass = "com.tonicsystems.jarjar.Main"
+    }
+}
